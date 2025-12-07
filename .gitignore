@@ -1,0 +1,47 @@
+# Build artifacts
+build/
+*.o
+*.obj
+*.exe
+*.out
+*.app
+
+# # Compiled binaries
+# assembler
+# emulator
+# factorial_c
+
+# Object files
+*.ko
+*.elf
+*.so
+*.so.*
+*.dylib
+*.dll
+
+# Debug files
+*.dSYM/
+*.su
+*.idb
+*.pdb
+
+# Editor and IDE files
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+
+# Dependency files
+*.d
+
+# Assembly and machine code outputs
+*.bin
+*.hex
+*.lst
+
+# Temporary files
+*.tmp
+*.temp
+*.log
