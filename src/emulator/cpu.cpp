@@ -1,19 +1,31 @@
+/**
+ * CPU Implementation
+ * 
+ * This file implements the core CPU emulator including:
+ *   - Fetch-decode-execute cycle
+ *   - Register file management
+ *   - Stack operations for function calls
+ *   - Instruction execution for all opcodes
+ *   - Condition flag updates
+ */
+
 #include "cpu.h"
 #include <iomanip>
 #include <iostream>
 
 CPU::CPU(Memory &mem) : memory(mem) { reset(); }
 
+
 void CPU::reset() {
-  // Clear all registers
+  // Clear all general-purpose registers
   for (int i = 0; i < NUM_REGISTERS; i++) {
     registers[i] = 0;
   }
 
-  pc = PROGRAM_START;
-  sp = STACK_END; // Stack grows downward
-  flags = 0;
-  halted = false;
+  pc = PROGRAM_START;    // Start executing from address 0x0000
+  sp = STACK_END;        // Stack grows downward from top of memory
+  flags = 0;             // Clear all condition flags
+  halted = false;        // CPU is ready to run
   debug_mode = false;
   instruction_count = 0;
 }
@@ -25,11 +37,19 @@ word_t CPU::get_register(int reg) const {
   return 0;
 }
 
+/**
+ * Push a value onto the stack
+ * Stack grows downward, so we decrement SP before writing
+ */
 void CPU::push(word_t value) {
-  sp -= 2; // Stack grows downward
+  sp -= 2; // Each word is 2 bytes
   memory.write_word(sp, value);
 }
 
+/**
+ * Pop a value from the stack
+ * Read the value then increment SP
+ */
 word_t CPU::pop() {
   word_t value = memory.read_word(sp);
   sp += 2;
@@ -38,12 +58,18 @@ word_t CPU::pop() {
 
 void CPU::halt() { halted = true; }
 
+/**
+ * Execute program until CPU halts
+ */
 void CPU::run() {
   while (!halted) {
     step();
   }
 }
 
+/**
+ * Execute a single instruction
+ */
 void CPU::step() {
   if (halted)
     return;
@@ -52,28 +78,39 @@ void CPU::step() {
   instruction_count++;
 }
 
+/**
+ * The heart of the CPU: Fetch-Decode-Execute cycle
+ * 
+ * 1. FETCH: Read instruction from memory at PC
+ * 2. DECODE: Extract opcode and operands from instruction
+ * 3. EXECUTE: Perform the operation
+ */
 void CPU::fetch_decode_execute() {
-  // FETCH: Read instruction from memory at PC
+  // FETCH: Read the next instruction from memory
   word_t instruction = memory.read_word(pc);
   addr_t current_pc = pc;
-  pc += 2; // Increment PC to next instruction
+  pc += 2; // Move to next instruction (each instruction is 2 bytes)
 
+  // Display instruction in debug mode
   if (debug_mode) {
     std::cout << "\n[" << instruction_count << "] ";
     disassemble_instruction(instruction, current_pc);
     std::cout << std::endl;
   }
 
-  // DECODE & EXECUTE
+  // DECODE & EXECUTE: Process the instruction
   execute_instruction(instruction);
 
+  // Show updated register state in debug mode
   if (debug_mode) {
     print_registers();
     print_flags();
   }
 }
 
+
 void CPU::execute_instruction(word_t instruction) {
+  // DECODE: Extract fields from the 16-bit instruction
   byte_t opcode = GET_OPCODE(instruction);
   byte_t rd = GET_RD(instruction);
   byte_t rs = GET_RS(instruction);
@@ -81,22 +118,23 @@ void CPU::execute_instruction(word_t instruction) {
   byte_t imm4 = GET_IMM4(instruction);
   byte_t imm7 = GET_IMM7(instruction);
 
+  // EXECUTE: Perform operation based on opcode
   switch (opcode) {
-  // Data Movement
+  // Data Movement Instructions
   case OP_NOP:
-    // No operation (or MOV when Rd != Rs)
+    // No operation (or register move when Rd != Rs)
     if (rd != rs) {
       registers[rd] = registers[rs];
     }
     break;
 
   case OP_MOVI:
-    // Move immediate (7-bit sign-extended)
+    // Move immediate value into register (sign-extended)
     registers[rd] = sign_extend_7bit(imm7);
     break;
 
   case OP_LOAD_IND:
-    // Load from memory[Rs]
+    // Load word from memory address in Rs into Rd
     registers[rd] = memory.read_word(registers[rs]);
     break;
 

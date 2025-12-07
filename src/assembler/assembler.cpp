@@ -1,3 +1,11 @@
+/**
+ * Assembler Implementation
+ * 
+ * This file implements a two-pass assembler that converts assembly language
+ * into binary machine code for our custom 16-bit RISC CPU.
+ * 
+ */
+
 #include "assembler.h"
 #include <algorithm>
 #include <cctype>
@@ -7,6 +15,9 @@
 
 Assembler::Assembler() : current_address(0), error_count(0) {}
 
+/**
+ * Remove leading and trailing whitespace from a string
+ */
 std::string Assembler::trim(const std::string &str) {
   size_t start = str.find_first_not_of(" \t\r\n");
   if (start == std::string::npos)
@@ -15,6 +26,10 @@ std::string Assembler::trim(const std::string &str) {
   return str.substr(start, end - start + 1);
 }
 
+/**
+ * Split a string into tokens using the specified delimiter
+ * Automatically trims whitespace from each token
+ */
 std::vector<std::string> Assembler::split(const std::string &str,
                                           char delimiter) {
   std::vector<std::string> tokens;
@@ -29,11 +44,17 @@ std::vector<std::string> Assembler::split(const std::string &str,
   return tokens;
 }
 
+/**
+ * Parse a single line of assembly code
+ * Handles labels, opcodes, operands, and comments
+ * 
+ * Format: [label:] [opcode] [operand1, operand2, ...] [; comment]
+ */
 AssemblyLine Assembler::parse_line(const std::string &line, int line_number) {
   AssemblyLine result;
   result.line_number = line_number;
 
-  // Remove comments
+  // Extract and remove comments (everything after ';')
   std::string code = line;
   size_t comment_pos = code.find(';');
   if (comment_pos != std::string::npos) {
@@ -45,7 +66,7 @@ AssemblyLine Assembler::parse_line(const std::string &line, int line_number) {
   if (code.empty())
     return result;
 
-  // Check for label (ends with ':')
+  // Extract label if present (format: LABEL:)
   size_t colon_pos = code.find(':');
   if (colon_pos != std::string::npos) {
     result.label = trim(code.substr(0, colon_pos));
@@ -55,12 +76,12 @@ AssemblyLine Assembler::parse_line(const std::string &line, int line_number) {
   if (code.empty())
     return result;
 
-  // Parse opcode and operands
+  // Parse instruction: opcode followed by comma-separated operands
   std::vector<std::string> parts = split(code, ' ');
   if (!parts.empty()) {
     result.opcode = parts[0];
 
-    // Join remaining parts and split by comma for operands
+    // Combine remaining parts and split by commas to get operands
     if (parts.size() > 1) {
       std::string operands_str;
       for (size_t i = 1; i < parts.size(); i++) {
@@ -75,10 +96,15 @@ AssemblyLine Assembler::parse_line(const std::string &line, int line_number) {
   return result;
 }
 
+/**
+ * Convert instruction mnemonic to numeric opcode
+ * Returns -1 if the mnemonic is not recognized
+ */
 int Assembler::get_opcode(const std::string &mnemonic) {
   std::string upper = mnemonic;
   std::transform(upper.begin(), upper.end(), upper.begin(), ::toupper);
 
+  // Data movement instructions
   if (upper == "NOP")
     return OP_NOP;
   if (upper == "MOV")
@@ -86,9 +112,11 @@ int Assembler::get_opcode(const std::string &mnemonic) {
   if (upper == "MOVI")
     return OP_MOVI;
   if (upper == "LOAD")
-    return OP_LOAD_IND; // Will determine indirect vs direct later
+    return OP_LOAD_IND;
   if (upper == "STORE")
     return OP_STORE_IND;
+  
+  // Arithmetic instructions
   if (upper == "ADD")
     return OP_ADD;
   if (upper == "ADDI")
@@ -105,6 +133,8 @@ int Assembler::get_opcode(const std::string &mnemonic) {
     return OP_INC;
   if (upper == "DEC")
     return OP_DEC;
+  
+  // Logical instructions
   if (upper == "AND")
     return OP_AND;
   if (upper == "ANDI")
@@ -117,6 +147,8 @@ int Assembler::get_opcode(const std::string &mnemonic) {
     return OP_XOR;
   if (upper == "NOT")
     return OP_NOT;
+  
+  // Shift instructions
   if (upper == "SHL")
     return OP_SHL;
   if (upper == "SHLI")
@@ -125,6 +157,8 @@ int Assembler::get_opcode(const std::string &mnemonic) {
     return OP_SHR;
   if (upper == "SHRI")
     return OP_SHRI;
+  
+  // Comparison and branch instructions
   if (upper == "CMP")
     return OP_CMP;
   if (upper == "CMPI")
@@ -141,6 +175,8 @@ int Assembler::get_opcode(const std::string &mnemonic) {
     return OP_JNC;
   if (upper == "JN")
     return OP_JN;
+  
+  // Function call and stack instructions
   if (upper == "CALL")
     return OP_CALL;
   if (upper == "RET")

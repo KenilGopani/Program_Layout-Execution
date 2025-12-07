@@ -1,36 +1,57 @@
+/**
+ * Arithmetic Logic Unit (ALU) Implementation
+ * 
+ * This file implements arithmetic and logical operations for the CPU.
+ * All operations update condition flags (Zero, Negative, Carry, Overflow)
+ * appropriately based on the result.
+ * 
+ * Condition Flags:
+ *   - Zero (Z): Set when result is zero
+ *   - Negative (N): Set when result is negative (MSB = 1)
+ *   - Carry (C): Set on unsigned overflow or borrow
+ *   - Overflow (V): Set on signed overflow
+ */
+
 #include "alu.h"
 
-// Helper: Clear all flags
 void ALU::clear_flags(word_t &flags) { flags = 0; }
 
-// Helper: Set zero flag if result is zero
+/**
+ * Set zero flag if result equals zero
+ */
 void ALU::set_zero_flag(word_t result, word_t &flags) {
   if (result == 0) {
     flags |= FLAG_ZERO;
   }
 }
 
-// Helper: Set negative flag if MSB is set
+/**
+ * Set negative flag if MSB (bit 15) is set
+ * In two's complement, MSB=1 indicates negative number
+ */
 void ALU::set_negative_flag(word_t result, word_t &flags) {
   if (result & 0x8000) {
     flags |= FLAG_NEGATIVE;
   }
 }
 
-// Addition with carry and overflow detection
+/**
+ * Perform addition with carry and overflow detection
+ */
 word_t ALU::add(word_t a, word_t b, word_t &flags) {
   clear_flags(flags);
 
+  // Use 32-bit arithmetic to detect overflow
   uint32_t result32 = (uint32_t)a + (uint32_t)b;
   word_t result = (word_t)result32;
 
-  // Set carry flag if overflow in unsigned addition
+  // Carry flag: unsigned overflow
   if (result32 > 0xFFFF) {
     flags |= FLAG_CARRY;
   }
 
-  // Set overflow flag if overflow in signed addition
-  // Overflow occurs when: (+) + (+) = (-) or (-) + (-) = (+)
+  // Overflow flag: signed overflow
+  // Occurs when adding two same-sign numbers produces opposite sign
   bool a_neg = (a & 0x8000) != 0;
   bool b_neg = (b & 0x8000) != 0;
   bool r_neg = (result & 0x8000) != 0;
@@ -45,19 +66,22 @@ word_t ALU::add(word_t a, word_t b, word_t &flags) {
   return result;
 }
 
-// Subtraction with borrow and overflow detection
+/**
+ * Perform subtraction with borrow and overflow detection
+ * 
+ */
 word_t ALU::sub(word_t a, word_t b, word_t &flags) {
   clear_flags(flags);
 
   int32_t result32 = (int32_t)a - (int32_t)b;
   word_t result = (word_t)result32;
 
-  // Set carry flag if borrow needed (a < b in unsigned)
+  // Carry flag: set when borrow is needed
   if (a < b) {
     flags |= FLAG_CARRY;
   }
 
-  // Set overflow flag if overflow in signed subtraction
+  // Overflow flag: signed subtraction overflow
   // Overflow occurs when: (+) - (-) = (-) or (-) - (+) = (+)
   bool a_neg = (a & 0x8000) != 0;
   bool b_neg = (b & 0x8000) != 0;

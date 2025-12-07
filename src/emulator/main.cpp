@@ -1,3 +1,10 @@
+/**
+ * CPU Emulator Entry Point
+ * 
+ * This program emulates a custom 16-bit RISC CPU that executes binary
+ * machine code produced by our assembler.
+ */
+
 #include "cpu.h"
 #include "memory.h"
 #include <iostream>
@@ -22,7 +29,7 @@ int main(int argc, char *argv[]) {
   bool debug_mode = false;
   bool memdump = false;
 
-  // Parse command-line arguments
+  // Parse command-line arguments to extract options and filename
   for (int i = 1; i < argc; i++) {
     std::string arg = argv[i];
     if (arg == "-d" || arg == "--debug") {
@@ -33,7 +40,7 @@ int main(int argc, char *argv[]) {
       print_usage(argv[0]);
       return 0;
     } else {
-      filename = arg;
+      filename = arg;  // This is our binary file to execute
     }
   }
 
@@ -43,36 +50,36 @@ int main(int argc, char *argv[]) {
     return 1;
   }
 
-  // Create memory and CPU
+  // Initialize the virtual hardware: memory and CPU
   Memory memory;
   CPU cpu(memory);
 
-  // Load program
+  // Load the binary program into memory
   if (!memory.load_program(filename)) {
-    return 1;
+    return 1;  // Load failed - error already printed
   }
 
-  // Enable debug mode if requested
+  // Enable debug mode if user requested detailed execution trace
   if (debug_mode) {
     cpu.set_debug_mode(true);
     std::cout << "\n=== Debug Mode Enabled ===\n";
   }
 
-  // Run program
+  // Execute the program until it halts
   std::cout << "\n=== Starting Execution ===\n";
   cpu.run();
 
-  // Print final state
+  // Display execution statistics and final CPU state
   std::cout << "\n=== Execution Complete ===\n";
   std::cout << "Instructions executed: " << cpu.get_instruction_count()
             << std::endl;
   cpu.print_registers();
   cpu.print_flags();
 
-  // Memory dump if requested
+  // Optionally dump memory contents for debugging
   if (memdump) {
     std::cout << "\n=== Memory Dump ===\n";
-    memory.dump(0x0000, 0x00FF); // Dump first 256 bytes
+    memory.dump(0x0000, 0x00FF); // Show first 256 bytes of memory
   }
 
   return 0;
